@@ -1,0 +1,11 @@
+## Features
+- Indexing
+- Search
+- Statistics
+- Media management
+- Bot management
+- User management
+- Server management
+- Updates
+- Tips
+- Help
