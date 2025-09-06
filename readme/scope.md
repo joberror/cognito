@@ -14,4 +14,6 @@ The Scope of this project is to create a telegram bot that can be used to manage
 
 - This project will make use of Docker and Coolify for easier development and hosting.
 
-- Simple logs (per feature) will be used for logging, and will be stored in the `logs` folder, detailing what happened and when, for future review and understanding.
+- Simple logs will be used for logging, and will be stored in the `logs` folder, detailing what happened and when, for future review and understanding. The log folder will take a structural approach based on features, time, processing and prompts.
+
+- Commands are what list out the features that are to be implemented explicitly, as every commands tied to their specific feature. These commands lies in the `readme > commands.md` file.
