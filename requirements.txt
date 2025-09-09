@@ -1,0 +1,59 @@
+
+# Core Dependencies
+python-dotenv
+
+# Core Telegram Bot Framework
+python-telegram-bot
+aiogram
+
+# Telegram Client (for advanced features requiring API_ID/API_HASH)
+# Choose one:
+telethon     # Recommended for media management (more features)
+# pyrogram   # Alternative (cleaner syntax, easier to learn)
+
+# Database & Storage (MongoDB Only)
+pymongo[srv]  # MongoDB driver with DNS SRV support
+motor  # Async MongoDB driver
+
+# Caching (Optional - for better performance)
+redis  # Optional: Remove if not using Redis
+
+# Media Processing & Analysis
+python-magic
+pillow
+ffmpeg-python
+mutagen
+
+# Search & Indexing (Whoosh - better search features for free)
+whoosh              # Local file-based search with advanced features
+fuzzywuzzy[speedup] # Fuzzy string matching
+# elasticsearch     # Optional: Only if using external Elasticsearch service
+
+# Async & Performance
+aiohttp
+aiofiles
+asyncio-throttle
+
+# Utilities & Validation
+pydantic
+click
+schedule
+humanize
+
+# Logging & Monitoring
+structlog
+prometheus-client
+sentry-sdk
+
+# Configuration & Environment
+pyyaml
+python-decouple
+
+# Testing & Development
+pytest
+pytest-asyncio
+black
+flake8
+pre-commit
+isort
+
