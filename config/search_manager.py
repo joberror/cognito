@@ -226,24 +226,34 @@ class SearchManager:
             logger.warning(f"Unknown search engine: {self.search_engine}, using MongoDB text search")
             self.backend = MongoDBTextSearch()
     
-    async def index_media_file(self, file_id: str, file_name: str, file_type: str, 
+    async def index_movie_file(self, file_id: str, file_name: str, file_type: str,
                               metadata: Dict = None) -> bool:
-        """Index a media file for search."""
+        """Index a movie file for search with movie-specific fields."""
         try:
-            # Create searchable content
+            # Create searchable content optimized for movies
             content_parts = [file_name, file_type]
-            
+
             if metadata:
-                # Add metadata to searchable content
-                if 'description' in metadata:
-                    content_parts.append(metadata['description'])
-                if 'tags' in metadata:
-                    content_parts.extend(metadata.get('tags', []))
-                if 'channel_name' in metadata:
-                    content_parts.append(metadata['channel_name'])
-            
+                # Movie-specific metadata fields
+                movie_fields = [
+                    'title', 'original_title', 'description', 'plot', 'synopsis',
+                    'genre', 'genres', 'director', 'directors', 'cast', 'actors',
+                    'year', 'release_date', 'country', 'language', 'languages',
+                    'quality', 'resolution', 'codec', 'audio_codec',
+                    'imdb_id', 'tmdb_id', 'rating', 'duration',
+                    'channel_name', 'tags', 'keywords'
+                ]
+
+                for field in movie_fields:
+                    if field in metadata:
+                        value = metadata[field]
+                        if isinstance(value, list):
+                            content_parts.extend(value)
+                        elif value:
+                            content_parts.append(str(value))
+
             content = ' '.join(filter(None, content_parts))
-            
+
             return await self.backend.index_document(
                 doc_id=file_id,
                 title=file_name,
@@ -255,13 +265,69 @@ class SearchManager:
             logger.error(f"Error indexing media file {file_id}: {e}")
             return False
     
-    async def search_media(self, query: str, limit: int = 50) -> List[Dict]:
-        """Search for media files."""
+    async def search_movies(self, query: str, limit: int = 25) -> List[Dict]:
+        """Search for movie files with movie-specific enhancements."""
         try:
-            return await self.backend.search(query, limit)
+            # Enhanced query processing for movies
+            enhanced_query = self._enhance_movie_query(query)
+            results = await self.backend.search(enhanced_query, limit)
+
+            # Post-process results for movie-specific ranking
+            return self._rank_movie_results(results, query)
         except Exception as e:
-            logger.error(f"Search error: {e}")
+            logger.error(f"Movie search error: {e}")
             return []
+
+    def _enhance_movie_query(self, query: str) -> str:
+        """Enhance search query for better movie matching."""
+        # Common movie search patterns
+        enhancements = {
+            # Quality indicators
+            r'\b(720p|1080p|4k|hd|full hd|ultra hd)\b': 'quality:$1',
+            # Year patterns
+            r'\b(19\d{2}|20\d{2})\b': 'year:$1',
+            # Genre keywords
+            r'\b(action|comedy|drama|horror|thriller|sci-fi|romance|documentary)\b': 'genre:$1',
+        }
+
+        enhanced = query.lower()
+        for pattern, replacement in enhancements.items():
+            import re
+            enhanced = re.sub(pattern, replacement, enhanced, flags=re.IGNORECASE)
+
+        return enhanced
+
+    def _rank_movie_results(self, results: List[Dict], original_query: str) -> List[Dict]:
+        """Apply movie-specific ranking to search results."""
+        # Boost results that match movie-specific criteria
+        for result in results:
+            score_boost = 0
+            metadata = result.get('metadata', {})
+
+            # Boost exact title matches
+            if 'title' in metadata and original_query.lower() in metadata['title'].lower():
+                score_boost += 0.3
+
+            # Boost by quality (higher quality = higher score)
+            quality = metadata.get('quality', '').lower()
+            if '4k' in quality or 'uhd' in quality:
+                score_boost += 0.2
+            elif '1080p' in quality or 'full hd' in quality:
+                score_boost += 0.1
+
+            # Boost by file format preference (mp4 > mkv > avi > others)
+            filename = result.get('title', '').lower()
+            if filename.endswith('.mp4'):
+                score_boost += 0.1
+            elif filename.endswith('.mkv'):
+                score_boost += 0.05
+
+            # Apply boost to score
+            if 'score' in result:
+                result['score'] = result.get('score', 0) + score_boost
+
+        # Sort by enhanced score
+        return sorted(results, key=lambda x: x.get('score', 0), reverse=True)
     
     async def delete_media(self, file_id: str) -> bool:
         """Remove media file from search index."""
@@ -284,15 +350,26 @@ class SearchManager:
 search_manager = SearchManager()
 
 
-# Convenience functions
+# Convenience functions for movie management
+async def index_movie_file(file_id: str, file_name: str, file_type: str, metadata: Dict = None) -> bool:
+    """Index a movie file for search."""
+    return await search_manager.index_movie_file(file_id, file_name, file_type, metadata)
+
+
+async def search_movies(query: str, limit: int = 25) -> List[Dict]:
+    """Search for movie files."""
+    return await search_manager.search_movies(query, limit)
+
+
+# Legacy functions (for backward compatibility)
 async def index_media_file(file_id: str, file_name: str, file_type: str, metadata: Dict = None) -> bool:
-    """Index a media file for search."""
-    return await search_manager.index_media_file(file_id, file_name, file_type, metadata)
+    """Legacy function - redirects to index_movie_file."""
+    return await index_movie_file(file_id, file_name, file_type, metadata)
 
 
-async def search_media(query: str, limit: int = 50) -> List[Dict]:
-    """Search for media files."""
-    return await search_manager.search_media(query, limit)
+async def search_media(query: str, limit: int = 25) -> List[Dict]:
+    """Legacy function - redirects to search_movies."""
+    return await search_movies(query, limit)
 
 
 async def delete_media_from_search(file_id: str) -> bool:
