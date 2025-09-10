@@ -1,6 +1,8 @@
 
 # Core Dependencies
 python-dotenv
+requests  # For API calls (Unsplash, etc.)
+aiohttp   # For async API calls
 
 # Core Telegram Bot Framework
 python-telegram-bot
