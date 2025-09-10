@@ -85,13 +85,23 @@ class WelcomeHandler:
             keyboard = self._build_welcome_keyboard(user_is_admin)
             
             # Send welcome message with poster
-            message = await context.bot.send_photo(
-                chat_id=chat.id,
-                photo=poster_data['url'],
-                caption=welcome_text,
-                parse_mode=ParseMode.MARKDOWN_V2,
-                reply_markup=keyboard
-            )
+            try:
+                message = await context.bot.send_photo(
+                    chat_id=chat.id,
+                    photo=poster_data['url'],
+                    caption=welcome_text,
+                    parse_mode=ParseMode.HTML,  # Use HTML instead of MarkdownV2
+                    reply_markup=keyboard
+                )
+            except Exception as photo_error:
+                logger.warning(f"Failed to send photo, sending text message instead: {photo_error}")
+                # Fallback to text message without photo
+                message = await context.bot.send_message(
+                    chat_id=chat.id,
+                    text=f"🎬 <b>Movie Poster</b>\n\n{welcome_text}",
+                    parse_mode=ParseMode.HTML,  # Use HTML instead of MarkdownV2
+                    reply_markup=keyboard
+                )
             
             # Schedule message deletion after 1 hour (3600 seconds)
             context.job_queue.run_once(
@@ -120,94 +130,91 @@ class WelcomeHandler:
         await self.handle_start_command(update, context)
     
     async def _format_welcome_message(
-        self, 
-        user, 
-        is_admin_user: bool, 
-        is_super_admin_user: bool, 
+        self,
+        user,
+        is_admin_user: bool,
+        is_super_admin_user: bool,
         channel_count: int
     ) -> str:
         """Format welcome message based on user type and bot status."""
-        
-        # Escape special characters for MarkdownV2
-        def escape_md(text: str) -> str:
-            """Escape special characters for MarkdownV2."""
-            special_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
-            for char in special_chars:
-                text = text.replace(char, f'\\{char}')
-            return text
-        
-        user_name = escape_md(user.first_name or "User")
+
+        # Escape special characters for HTML
+        def escape_html(text: str) -> str:
+            """Escape special characters for HTML."""
+            return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+        user_name = escape_html(user.first_name or "User")
         
         if is_admin_user:
             if channel_count == 0:
                 # First-time admin setup
-                return f"""🎬 *Welcome to Cognito, {user_name}\\!*
+                return f"""🎬 <b>Welcome to Cognito, {user_name}!</b>
 
-🎯 *You're an admin\\!* This seems to be your first time setting up the bot\\.
+🎯 <b>You're an admin!</b> This seems to be your first time setting up the bot.
 
-*🚀 Quick Setup Guide:*
+<b>🚀 Quick Setup Guide:</b>
 1️⃣ Add me to your private movie channels
 2️⃣ Give me admin rights in those channels
-3️⃣ Use `/channel add @your_channel` to start monitoring
+3️⃣ Use <code>/channel add @your_channel</code> to start monitoring
 4️⃣ I'll automatically index all movies for search
 
-*🎬 What I Do:*
-• 📊 *Auto\\-index* movies from your channels
-• 🔍 *Smart search* with advanced filters
-• 🎯 *Direct links* to movie files
-• ⚙️ *Admin controls* for management
+<b>🎬 What I Do:</b>
+• 📊 <b>Auto-index</b> movies from your channels
+• 🔍 <b>Smart search</b> with advanced filters
+• 🎯 <b>Direct links</b> to movie files
+• ⚙️ <b>Admin controls</b> for management
 
-*Ready to connect your first channel?*
-Use: `/channel add @your_movie_channel`
+<b>Ready to connect your first channel?</b>
+Use: <code>/channel add @your_movie_channel</code>
 
-_This message will disappear in 1 hour\\._"""
+<i>This message will disappear in 1 hour.</i>"""
             else:
                 # Existing admin
-                return f"""🎬 *Welcome back, {user_name}\\!*
+                return f"""🎬 <b>Welcome back, {user_name}!</b>
 
-🎯 *Admin Dashboard Ready*
+🎯 <b>Admin Dashboard Ready</b>
 
-*📊 Current Status:*
-• 📺 *Channels:* {channel_count} connected
-• 🎬 *Movies:* Auto\\-indexing active
-• 🔍 *Search:* Fully operational
+<b>📊 Current Status:</b>
+• 📺 <b>Channels:</b> {channel_count} connected
+• 🎬 <b>Movies:</b> Auto-indexing active
+• 🔍 <b>Search:</b> Fully operational
 
-*🛠️ Admin Commands:*
-• `/admin panel` \\- Admin dashboard
-• `/channel list` \\- View all channels
-• `/stats` \\- Bot statistics
-• `/users` \\- User management
+<b>🛠️ Admin Commands:</b>
+• <code>/admin panel</code> - Admin dashboard
+• <code>/channel list</code> - View all channels
+• <code>/stats</code> - Bot statistics
+• <code>/users</code> - User management
 
-*🎬 Your movie collection is ready for users\\!*
+<b>🎬 Your movie collection is ready for users!</b>
 
-_This message will disappear in 1 hour\\._"""
+<i>This message will disappear in 1 hour.</i>"""
         else:
             # Regular user
-            return f"""🎬 *Welcome to Cognito, {user_name}\\!*
+            return f"""🎬 <b>Welcome to Cognito, {user_name}!</b>
 
-🍿 *Your Personal Movie Search Engine*
+🍿 <b>Your Personal Movie Search Engine</b>
 
-*🎯 What I Do:*
-• 🔍 *Search* thousands of movies instantly
-• 🎬 *Find* movies by title, genre, year, quality
-• 📱 *Get* direct download links
-• ⭐ *Discover* new movies and classics
+<b>🎯 What I Do:</b>
+• 🔍 <b>Search</b> thousands of movies instantly
+• 🎬 <b>Find</b> movies by title, genre, year, quality
+• 📱 <b>Get</b> direct download links
+• ⭐ <b>Discover</b> new movies and classics
 
-*🚀 How to Search:*
-• `/search batman 2022` \\- Find Batman movies from 2022
-• `/search action 1080p` \\- Find 1080p action movies
-• `/search christopher nolan` \\- Find movies by director
-• `/movie "The Dark Knight"` \\- Search exact title
+<b>🚀 How to Search:</b>
+• <code>/search batman 2022</code> - Find Batman movies from 2022
+• <code>/search action 1080p</code> - Find 1080p action movies
+• <code>/search christopher nolan</code> - Find movies by director
+• <code>/movie "The Dark Knight"</code> - Search exact title
 
-*💡 Pro Tips:*
+<b>💡 Pro Tips:</b>
 • Use quotes for exact titles
 • Add year for popular movies
 • Try different keywords if no results
 
-*Ready to find your next movie?*
-Try: `/search popular 2023`
+<b>Ready to find your next movie?</b>
+Try: <code>/search popular 2023</code>
 
-_This message will disappear in 1 hour\\._"""
+<i>This message will disappear in 1 hour.</i>"""
     
     def _build_welcome_keyboard(self, is_admin_user: bool) -> InlineKeyboardMarkup:
         """Build welcome message keyboard based on user type."""
@@ -285,29 +292,29 @@ _This message will disappear in 1 hour\\._"""
     
     async def _send_help_tutorial(self, query, context):
         """Send help tutorial message."""
-        help_text = """📚 *How to Use Cognito*
+        help_text = """📚 <b>How to Use Cognito</b>
 
-*🔍 Basic Search:*
-• `/search <movie name>` \\- Search by title
-• `/search <genre>` \\- Search by genre
-• `/search <director>` \\- Search by director
+<b>🔍 Basic Search:</b>
+• <code>/search &lt;movie name&gt;</code> - Search by title
+• <code>/search &lt;genre&gt;</code> - Search by genre
+• <code>/search &lt;director&gt;</code> - Search by director
 
-*🎯 Advanced Search:*
-• `/search batman 2022` \\- Title \\+ year
-• `/search action 1080p` \\- Genre \\+ quality
-• `/movie "exact title"` \\- Exact match
+<b>🎯 Advanced Search:</b>
+• <code>/search batman 2022</code> - Title + year
+• <code>/search action 1080p</code> - Genre + quality
+• <code>/movie "exact title"</code> - Exact match
 
-*💡 Tips:*
+<b>💡 Tips:</b>
 • Be specific for better results
 • Try different keywords
 • Use quotes for exact titles
 • Include year for popular movies
 
-*🎬 Ready to search?*"""
-        
+<b>🎬 Ready to search?</b>"""
+
         await query.edit_message_text(
             text=help_text,
-            parse_mode=ParseMode.MARKDOWN_V2,
+            parse_mode=ParseMode.HTML,
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton("🔙 Back to Welcome", callback_data="back_to_welcome")
             ]])
@@ -315,30 +322,30 @@ _This message will disappear in 1 hour\\._"""
     
     async def _send_search_tips(self, query, context):
         """Send search tips message."""
-        tips_text = """🔍 *Pro Search Tips*
+        tips_text = """🔍 <b>Pro Search Tips</b>
 
-*🎯 For Best Results:*
+<b>🎯 For Best Results:</b>
 • Use specific movie titles
 • Include release year
 • Try director names
 • Use genre keywords
 
-*🎬 Examples:*
-• `batman 2022` \\- Recent Batman movies
-• `nolan sci\\-fi` \\- Nolan sci\\-fi movies
-• `marvel 4k` \\- 4K Marvel movies
-• `comedy 2023` \\- Recent comedies
+<b>🎬 Examples:</b>
+• <code>batman 2022</code> - Recent Batman movies
+• <code>nolan sci-fi</code> - Nolan sci-fi movies
+• <code>marvel 4k</code> - 4K Marvel movies
+• <code>comedy 2023</code> - Recent comedies
 
-*🚀 Advanced Queries:*
-• `title:batman AND year:2022`
-• `genre:action AND quality:1080p`
-• `director:nolan OR director:tarantino`
+<b>🚀 Advanced Queries:</b>
+• <code>title:batman AND year:2022</code>
+• <code>genre:action AND quality:1080p</code>
+• <code>director:nolan OR director:tarantino</code>
 
-*Ready to become a search pro?*"""
-        
+<b>Ready to become a search pro?</b>"""
+
         await query.edit_message_text(
             text=tips_text,
-            parse_mode=ParseMode.MARKDOWN_V2,
+            parse_mode=ParseMode.HTML,
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton("🔙 Back to Welcome", callback_data="back_to_welcome")
             ]])

@@ -7,7 +7,6 @@ A Telegram bot for managing and searching movie files from private channels.
 
 import logging
 import os
-import asyncio
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import (
@@ -78,32 +77,48 @@ class CognitoBot:
         logger.info("Bot initialization complete")
         logger.info(f"Bot username: @{application.bot.username}")
 
-    async def start_bot(self):
+    def start_bot(self):
         """Start the bot."""
         logger.info("Starting Cognito Movie Management Bot...")
 
         # Create application
         self.application = Application.builder().token(self.bot_token).build()
 
-        # Set up handlers
-        await self.setup_handlers()
+        # Set up handlers (sync version)
+        self.setup_handlers_sync()
 
         # Set post init hook
         self.application.post_init = self.post_init
 
         # Start the bot
         logger.info("Bot is starting...")
-        await self.application.run_polling(
+        self.application.run_polling(
             allowed_updates=Update.ALL_TYPES,
             drop_pending_updates=True
         )
 
+    def setup_handlers_sync(self):
+        """Set up all command and callback handlers (sync version)."""
+        logger.info("Setting up bot handlers...")
 
-async def main():
+        # Welcome commands
+        self.application.add_handler(CommandHandler("start", welcome_handler.handle_start_command))
+        self.application.add_handler(CommandHandler("intro", welcome_handler.handle_intro_command))
+
+        # Callback query handler for inline keyboards
+        self.application.add_handler(CallbackQueryHandler(welcome_handler.handle_callback_query))
+
+        # Error handler
+        self.application.add_error_handler(self.error_handler)
+
+        logger.info("Bot handlers setup complete")
+
+
+def main():
     """Main function to start the bot."""
     try:
         bot = CognitoBot()
-        await bot.start_bot()
+        bot.start_bot()
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")
     except Exception as e:
@@ -112,5 +127,5 @@ async def main():
 
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    main()
 

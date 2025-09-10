@@ -10,22 +10,43 @@ from datetime import datetime
 def escape_markdown_v2(text: str) -> str:
     """
     Escape special characters for Telegram MarkdownV2 format.
-    
+
     Args:
         text: Text to escape
-        
+
     Returns:
         Escaped text safe for MarkdownV2
     """
     if not text:
         return ""
-    
+
     # Characters that need escaping in MarkdownV2
-    special_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
-    
-    for char in special_chars:
-        text = text.replace(char, f'\\{char}')
-    
+    # Order matters - escape backslash first, then others
+    escape_chars = [
+        ('\\', '\\\\'),  # Backslash first
+        ('_', '\\_'),
+        ('*', '\\*'),
+        ('[', '\\['),
+        (']', '\\]'),
+        ('(', '\\('),
+        (')', '\\)'),
+        ('~', '\\~'),
+        ('`', '\\`'),
+        ('>', '\\>'),
+        ('#', '\\#'),
+        ('+', '\\+'),
+        ('-', '\\-'),
+        ('=', '\\='),
+        ('|', '\\|'),
+        ('{', '\\{'),
+        ('}', '\\}'),
+        ('.', '\\.'),
+        ('!', '\\!')
+    ]
+
+    for char, escaped in escape_chars:
+        text = text.replace(char, escaped)
+
     return text
 
 
